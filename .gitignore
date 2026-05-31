@@ -81,3 +81,12 @@ dev-docs/
 compound.config.json
 *.error.log
 _scratch/
+
+# Docker / deployment — live configs stay local
+docker-compose.override.yml
+odysseus-tunnel/
+.env.tunnel
+
+# Cloudflare / tunnel tokens
+*.token
+tunnel.json

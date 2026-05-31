@@ -1,3 +1,45 @@
+> [!NOTE]
+> **This is a fork of [pewdiepie-archdaemon/odysseus](https://github.com/pewdiepie-archdaemon/odysseus).**
+>
+> This fork is configured for **cloud-hosted LLM deployment** via [nano-gpt.com](https://nano-gpt.com/r/VA994hyf) rather than local hardware. The primary differences from upstream:
+>
+> - `docker-compose.yml` is hardened for production self-hosting - isolated internal Docker network (`odysseus-internal`), no host-exposed ports, `no-new-privileges`, capability drops, resource limits, and an external tunnel network (`odysseus-gateway`) for Cloudflare or similar reverse-proxy setups
+> - `.env.example` defaults to `nano-gpt.com/api/v1` as the LLM host instead of `localhost`, with nano-gpt model suggestions and embeddings endpoint pre-documented
+> - `docker-compose.example.yml` provided as a clean reference for self-hosters adapting the compose to their own infrastructure
+>
+> If you are running local hardware (Ollama, vLLM, llama.cpp) refer to the upstream repo. This fork is intended for users who want a **VPS-hosted, cloud-provider-backed** deployment behind a secure tunnel.
+>
+> **This fork is not actively maintained.** It is a personal deployment snapshot. For updates, bug fixes, and new features follow the upstream repo.
+
+---
+
+<details>
+<summary><strong>⚡ Fork-specific setup — Cloudflare Tunnel + nano-gpt.com</strong></summary>
+
+### 1 — nano-gpt.com API key
+1. Sign up at [nano-gpt.com](https://nano-gpt.com/r/VA994hyf) and grab an API key from your dashboard
+2. In `.env` set `OPENAI_API_KEY=your_key_here` and `LLM_HOST=https://nano-gpt.com/api/v1`
+3. That's it — Odysseus will pull the full model list from nano-gpt on first load
+
+### 2 — Cloudflare Tunnel (no open ports required)
+1. In the [Cloudflare Zero Trust dashboard](https://one.dash.cloudflare.com) go to **Networks → Tunnels → Create tunnel**
+2. Copy the tunnel token it gives you
+3. Create a Docker network: `docker network create odysseus-gateway`
+4. Run the tunnel container pointed at that network and token (see `docker-compose.example.yml` for the pattern)
+5. Back in the dashboard, add a **Public Hostname** on the tunnel: point it at `odysseus:7000`
+6. Optionally add a **Zero Trust Application** on that hostname to gate access with your identity provider
+
+### 3 — Spin up
+```bash
+cp .env.example .env        # fill in OPENAI_API_KEY and ODYSSEUS_ADMIN_PASSWORD
+docker compose up -d --build
+```
+First boot builds the image (~3–5 min). After that, open your tunnel domain, log in, go to **Settings → Add Models**, add `https://nano-gpt.com/api/v1` with your key, and the full model picker populates.
+
+</details>
+
+---
+
 # Odysseus
 ───────────────────────────────────────────────
  ⊹ ࣪ ˖ ૮( ˶ᵔ ᵕ ᵔ˶ )っ  Odysseus vers. 1.0
@@ -37,7 +79,7 @@ A full, hover-to-play tour lives on the landing page (`docs/index.html`). A few 
 
 ## Quick Start
 
-Defaults work out of the box — clone, run, configure inside the app.
+Defaults work out of the box - clone, run, configure inside the app.
 Open the **Settings** panel after first login to point Odysseus at your LLM
 server, search provider, email account, etc. Only touch `.env` if you need
 to override deployment-level things like `AUTH_ENABLED`, `DATABASE_URL`,
@@ -81,7 +123,7 @@ MemoryVectorStore initialized
 The Cookbook model catalog check should print a non-zero count. If it prints
 `0`, rebuild the Odysseus image with `docker compose build --no-cache odysseus`.
 
-### Option 2: Manual install — Linux / macOS
+### Option 2: Manual install - Linux / macOS
 **Requirements:** Python 3.11+. On Linux/Termux, Cookbook also requires `tmux`
 for background model downloads and serves.
 
@@ -108,7 +150,7 @@ python setup.py            # creates data dirs and prints an initial admin passw
 uvicorn app:app --host 0.0.0.0 --port 7000
 ```
 
-### Option 3: Manual install — Windows (PowerShell)
+### Option 3: Manual install - Windows (PowerShell)
 ```powershell
 git clone <your-odysseus-repo-url>
 cd odysseus
@@ -136,7 +178,7 @@ Odysseus is a self-hosted workspace with powerful local tools: shell access, fil
 - Before publishing a fork, run `git status --short` and confirm no private files from `.env`, `data/`, `logs/`, uploads, backups, or local databases are staged.
 
 ### Putting it behind HTTPS
-Odysseus serves plain HTTP on its port. That's fine for `localhost` and trusted LAN/VPN use, but browsers will warn ("Password fields present on an insecure page") and the login + API tokens travel in cleartext. For anything reachable outside your machine — including a Tailscale IP shared with other devices — put a TLS-terminating reverse proxy in front.
+Odysseus serves plain HTTP on its port. That's fine for `localhost` and trusted LAN/VPN use, but browsers will warn ("Password fields present on an insecure page") and the login + API tokens travel in cleartext. For anything reachable outside your machine - including a Tailscale IP shared with other devices - put a TLS-terminating reverse proxy in front.
 
 Shortest path with [Caddy](https://caddyserver.com/) (auto-renews Let's Encrypt certs):
 
@@ -146,7 +188,7 @@ odysseus.example.com {
 }
 ```
 
-For a LAN-only Tailscale deployment, Caddy + [tailscale-cert](https://caddyserver.com/docs/caddyfile/options#auto-https) or the built-in MagicDNS HTTPS feature both work. nginx/Traefik configs are similar — proxy `localhost:7000`, terminate TLS at the proxy. Once that's in place, the browser warning goes away and your login is encrypted.
+For a LAN-only Tailscale deployment, Caddy + [tailscale-cert](https://caddyserver.com/docs/caddyfile/options#auto-https) or the built-in MagicDNS HTTPS feature both work. nginx/Traefik configs are similar - proxy `localhost:7000`, terminate TLS at the proxy. Once that's in place, the browser warning goes away and your login is encrypted.
 
 ## Contributing
 Help is welcome. The best entry points are fresh-install testing, provider setup

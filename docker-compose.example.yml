@@ -34,6 +34,8 @@ services:
       - SEARXNG_INSTANCE=http://searxng:8080
       - CHROMADB_HOST=chromadb
       - CHROMADB_PORT=8000
+      # PUID/PGID — UID/GID the container drops to at runtime.
+      # Find yours with: id -u / id -g
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
     depends_on:
@@ -48,6 +50,8 @@ services:
           memory: 2048M
     networks:
       - odysseus-internal
+      # Replace odysseus-gateway with your own external Docker network
+      # that your reverse proxy / tunnel container is attached to.
       - odysseus-gateway
 
   chromadb:
@@ -86,8 +90,10 @@ services:
           memory: 256M
 
   # ntfy — push notification service for task reminders.
-  # Disabled until needed. To enable: uncomment this block and add
-  # NTFY_BASE_URL to .env pointing at your ntfy tunnel hostname.
+  # Disabled by default. To enable:
+  #   1. Uncomment this block and the ntfy-cache volume below.
+  #   2. Set NTFY_BASE_URL to your publicly accessible ntfy hostname.
+  #   3. Expose ntfy via your reverse proxy / tunnel on a separate hostname.
   #
   # ntfy:
   #   <<: *base
@@ -97,7 +103,7 @@ services:
   #   volumes:
   #     - ntfy-cache:/var/cache/ntfy
   #   environment:
-  #     - NTFY_BASE_URL=https://ntfy.trap.lol
+  #     - NTFY_BASE_URL=https://ntfy.your-domain.example.com
   #   deploy:
   #     resources:
   #       limits:
@@ -111,6 +117,11 @@ volumes:
 
 networks:
   odysseus-internal:
+    # internal: true prevents all external routing from this network.
+    # chromadb and searxng are only reachable from the odysseus container.
     internal: true
   odysseus-gateway:
+    # This must be an already-existing external network shared with your
+    # reverse proxy or tunnel container. Create it first:
+    #   docker network create odysseus-gateway
     external: true
